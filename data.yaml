@@ -4,4 +4,7 @@ val: images/val
 test: images/test
 
 names:
-    0: enemy
+  0: en
+  1: enHead
+  2: ally
+  3: allyHead
