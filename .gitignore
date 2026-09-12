@@ -1,0 +1,16 @@
+images/
+labels/
+
+__pycache__/
+.venv/
+.venv2/
+
+*.cache
+*.pt
+*.engine
+*.onnx
+
+history/
+best/
+runs/
+weights/
