@@ -79,6 +79,8 @@ def checkData():
 
 # 檢查並建立 data.yaml
 
+# 檢查並建立 data.yaml
+
 def checkYaml():
 
 # 取得 valorant 專案根目錄
@@ -89,28 +91,38 @@ def checkYaml():
 
     yamlFile = projectPath / "data.yaml"
 
-# data.yaml 不存在時自動建立
-
-    if not yamlFile.exists():
-
 # 預設 YOLO 資料集設定
 
-        content ="""path: .
+    content = """path: .
 train: images/train
 val: images/val
 test: images/test
 
 names:
-    0: en
-    1: enHead
-    2: ally
-    3: allyHead
+  0: en
+  1: enHead
+  2: ally
 """
+
+# data.yaml 不存在或內容不同時重新建立
+
+    if (
+        not yamlFile.exists()
+        or yamlFile.read_text(
+            encoding="utf-8"
+        ).strip() != content.strip()
+    ):
 
 # 寫入 data.yaml
 
-        yamlFile.write_text(content, encoding="utf-8")
-        print("已自動建立 data.yaml")
+        yamlFile.write_text(
+            content,
+            encoding="utf-8"
+        )
+
+        print(
+            "已自動建立或修正 data.yaml"
+        )
 
     return True
 
@@ -263,7 +275,6 @@ def recover(historyPath, bestPath):
 
     return bestPath / "best.pt"
 
-
 # 尋找下一輪需要用到的模型
 
 def findModel(historyPath, bestPath):
@@ -321,7 +332,6 @@ def findModel(historyPath, bestPath):
 
     return "yolo11s.pt"
 
-
 # 儲存本次訓練模型資訊
 
 def saveInfo(bestModel):
@@ -338,7 +348,7 @@ def saveInfo(bestModel):
 
     result = model.val(
         data = "data.yaml",
-        imgsz =640,
+        imgsz =1600,
         device = 0,
         verbose = False
     )
@@ -351,8 +361,23 @@ def saveInfo(bestModel):
         "precision": float(result.box.mp),
         "recall": float(result.box.mr),
         "mAP50": float(result.box.map50),
-        "mAP50-95": float(result.box.map)
+        "mAP50-95": float(result.box.map),
+# 各類別 mAP50-95
+
+        "enMap50-95": float(
+            result.box.maps[0]
+        ),
+
+        "enHeadMap50-95": float(
+            result.box.maps[1]
+        ),
+
+        "allyMap50-95": float(
+            result.box.maps[2]
+        )
     }
+
+
 
 # info.json 路徑
 
@@ -382,15 +407,20 @@ def trainModel(modelPath, historyPath):
     model = YOLO(str(modelPath))
 
     model.train(
-            data="data.yaml",
-            epochs=100,
-            imgsz=1280,
-            batch=4,
-            device=0,
-            patience=25,
-            project=str(historyPath),
-            name="run",
-            exist_ok=False
+        data="data.yaml",
+        epochs=150,
+        imgsz=1600,
+        batch=2,
+        device=0,
+        patience=40,
+
+        optimizer="AdamW",
+        lr0=0.0008,
+
+
+        project=str(historyPath),
+        name="run",
+        exist_ok=False
     )
 
 # 取得本次訓練最佳模型路徑
@@ -409,11 +439,11 @@ def TensorRT(bestModel):
 
     model = YOLO(str(bestModel))
 
-# 匯出 FP16 TensorRT Engine
+# 匯出 FP32 TensorRT Engine
 
     enginePath = model.export(
         format="engine",
-        imgsz=640,
+        imgsz=1600,
         batch=1,
         device=0
     )
